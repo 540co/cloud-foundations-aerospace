@@ -57,28 +57,6 @@ locals {
       principal_branch = "principalSet://iam.googleapis.com/%s/attribute.fast_sub/repo:%s:ref:refs/heads/%s"
       principal_repo   = "principalSet://iam.googleapis.com/%s/attribute.repository/%s"
     }
-    # https://docs.gitlab.com/ee/ci/secrets/id_token_authentication.html#token-payload
-    gitlab = {
-      attribute_mapping = {
-        "google.subject"                  = "assertion.sub"
-        "attribute.sub"                   = "assertion.sub"
-        "attribute.environment"           = "assertion.environment"
-        "attribute.environment_protected" = "assertion.environment_protected"
-        "attribute.namespace_id"          = "assertion.namespace_id"
-        "attribute.namespace_path"        = "assertion.namespace_path"
-        "attribute.pipeline_id"           = "assertion.pipeline_id"
-        "attribute.pipeline_source"       = "assertion.pipeline_source"
-        "attribute.project_id"            = "assertion.project_id"
-        "attribute.project_path"          = "assertion.project_path"
-        "attribute.repository"            = "assertion.project_path"
-        "attribute.ref"                   = "assertion.ref"
-        "attribute.ref_protected"         = "assertion.ref_protected"
-        "attribute.ref_type"              = "assertion.ref_type"
-      }
-      issuer_uri       = "https://gitlab.com"
-      principal_branch = "principalSet://iam.googleapis.com/%s/attribute.sub/project_path:%s:ref_type:branch:ref:%s"
-      principal_repo   = "principalSet://iam.googleapis.com/%s/attribute.repository/%s"
-    }
   }
 }
 

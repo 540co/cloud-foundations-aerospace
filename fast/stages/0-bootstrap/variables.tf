@@ -69,10 +69,10 @@ variable "cicd_repositories" {
     condition = alltrue([
       for k, v in coalesce(var.cicd_repositories, {}) :
       v == null || (
-        contains(["github", "gitlab", "sourcerepo"], coalesce(try(v.type, null), "null"))
+        contains(["github", "sourcerepo"], coalesce(try(v.type, null), "null"))
       )
     ])
-    error_message = "Invalid repository type, supported types: 'github' 'gitlab' or 'sourcerepo'."
+    error_message = "Invalid repository type, supported types: 'github' or 'sourcerepo'."
   }
 }
 
@@ -163,10 +163,10 @@ variable "iam_by_principals" {
 variable "locations" {
   description = "Optional locations for GCS, BigQuery, and logging buckets created here."
   type = object({
-    bq      = optional(string, "EU")
-    gcs     = optional(string, "EU")
-    logging = optional(string, "global")
-    pubsub  = optional(list(string), [])
+    bq      = optional(string, "us-central1")
+    gcs     = optional(string, "us-central1")
+    logging = optional(string, "us-central1")
+    pubsub  = optional(list(string), ["us-central1"])
   })
   nullable = false
   default  = {}
@@ -199,16 +199,11 @@ variable "log_sinks" {
       type   = "logging"
     }
     vpc-sc = {
-      filter = <<-FILTER
-        protoPayload.metadata.@type="type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata"
-      FILTER
+      filter = "protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata\""
       type   = "logging"
     }
     workspace-audit-logs = {
-      filter = <<-FILTER
-        log_id("cloudaudit.googleapis.com/data_access") AND
-        protoPayload.serviceName="login.googleapis.com"
-      FILTER
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Fdata_access\" and protoPayload.serviceName:\"login.googleapis.com\""
       type   = "logging"
     }
   }
@@ -302,9 +297,4 @@ variable "workload_identity_providers" {
   }))
   default  = {}
   nullable = false
-  # TODO: fix validation
-  # validation {
-  #   condition     = var.federated_identity_providers.custom_settings == null
-  #   error_message = "Custom settings cannot be null."
-  # }
 }

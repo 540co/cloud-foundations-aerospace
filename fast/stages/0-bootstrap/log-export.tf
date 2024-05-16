@@ -54,9 +54,9 @@ module "log-export-project" {
     "roles/viewer" = [module.automation-tf-bootstrap-r-sa.iam_email]
   }
   services = [
-    # "cloudresourcemanager.googleapis.com",
-    # "iam.googleapis.com",
-    # "serviceusage.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+    "iam.googleapis.com",
+    "serviceusage.googleapis.com",
     "bigquery.googleapis.com",
     "storage.googleapis.com",
     "stackdriver.googleapis.com"
