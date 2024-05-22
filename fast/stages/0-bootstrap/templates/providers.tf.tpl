@@ -25,9 +25,17 @@ terraform {
 }
 provider "google" {
   impersonate_service_account = "${sa}"
+  scopes = [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/userinfo.email"
+  ]
 }
 provider "google-beta" {
   impersonate_service_account = "${sa}"
+  scopes = [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/userinfo.email"
+  ]
 }
 
 # end provider.tf for ${name}

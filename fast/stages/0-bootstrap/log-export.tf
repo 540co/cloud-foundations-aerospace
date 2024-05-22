@@ -39,11 +39,10 @@ locals {
 module "log-export-project" {
   source = "../../../modules/project"
   name   = "audit-logs-0"
-  parent = coalesce(
-    var.project_parent_ids.logging, "organizations/${var.organization.id}"
-  )
+  parent = coalesce(var.project_parent_ids.logging, var.organization_id)
   prefix          = local.prefix
   billing_account = var.billing_account.id
+  organization_id = var.organization_id
   contacts = (
     var.bootstrap_user != null || var.essential_contacts == null
     ? {}
@@ -61,6 +60,12 @@ module "log-export-project" {
     "storage.googleapis.com",
     "stackdriver.googleapis.com"
   ]
+  bucket_name                    = "audit-exp-0-data"
+  service_account_email          = "log-export-sa@iha-prod-audit-logs-0.iam.gserviceaccount.com"
+  internal_service_account_email = "log-export-sa@iha-prod-audit-logs-0.iam.gserviceaccount.com"
+  kms_key_name                   = "audit-log-0-key"
+  log_bucket_name                = "audit-exp-0-log"
+  project_id                     = "audit-exp-0"
 }
 
 # one log export per type, with conditionals to skip those not needed

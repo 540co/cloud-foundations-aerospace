@@ -74,50 +74,50 @@ locals {
   }
 }
 
-resource "google_org_policy_policy" "default" {
-  for_each = local.org_policies
-  name     = each.value.name
-  parent   = each.value.parent
-  spec {
-    inherit_from_parent = each.value.inherit_from_parent
-    reset               = each.value.reset
-    dynamic "rules" {
-      for_each = each.value.rules
-      iterator = rule
-      content {
-        allow_all = try(rule.value.allow.all, false) == true ? "TRUE" : null
-        deny_all  = try(rule.value.deny.all, false) == true ? "TRUE" : null
-        enforce = (
-          each.value.is_boolean_policy && rule.value.enforce != null
-          ? upper(tostring(rule.value.enforce))
-          : null
-        )
-        dynamic "condition" {
-          for_each = rule.value.condition.expression != null ? [1] : []
-          content {
-            description = rule.value.condition.description
-            expression  = rule.value.condition.expression
-            location    = rule.value.condition.location
-            title       = rule.value.condition.title
-          }
-        }
-        dynamic "values" {
-          for_each = rule.value.has_values ? [1] : []
-          content {
-            allowed_values = try(rule.value.allow.values, null)
-            denied_values  = try(rule.value.deny.values, null)
-          }
-        }
-      }
-    }
-  }
-  depends_on = [
-    google_organization_iam_binding.authoritative,
-    google_organization_iam_binding.bindings,
-    google_organization_iam_member.bindings,
-    google_organization_iam_custom_role.roles,
-    google_org_policy_custom_constraint.constraint,
-    google_tags_tag_key.default,
-    google_tags_tag_value.default,
-  ]
-}
+# resource "google_org_policy_policy" "default" {
+#   for_each = local.org_policies
+#   name     = each.value.name
+#   parent   = each.value.parent
+#   spec {
+#     inherit_from_parent = each.value.inherit_from_parent
+#     reset               = each.value.reset
+#     dynamic "rules" {
+#       for_each = each.value.rules
+#       iterator = rule
+#       content {
+#         allow_all = try(rule.value.allow.all, false) == true ? "TRUE" : null
+#         deny_all  = try(rule.value.deny.all, false) == true ? "TRUE" : null
+#         enforce = (
+#           each.value.is_boolean_policy && rule.value.enforce != null
+#           ? upper(tostring(rule.value.enforce))
+#           : null
+#         )
+#         dynamic "condition" {
+#           for_each = rule.value.condition.expression != null ? [1] : []
+#           content {
+#             description = rule.value.condition.description
+#             expression  = rule.value.condition.expression
+#             location    = rule.value.condition.location
+#             title       = rule.value.condition.title
+#           }
+#         }
+#         dynamic "values" {
+#           for_each = rule.value.has_values ? [1] : []
+#           content {
+#             allowed_values = try(rule.value.allow.values, null)
+#             denied_values  = try(rule.value.deny.values, null)
+#           }
+#         }
+#       }
+#     }
+#   }
+#   depends_on = [
+#     google_organization_iam_binding.authoritative,
+#     google_organization_iam_binding.bindings,
+#     google_organization_iam_member.bindings,
+#     google_organization_iam_custom_role.roles,
+#     google_org_policy_custom_constraint.constraint,
+#     google_tags_tag_key.default,
+#     google_tags_tag_value.default,
+#   ]
+# }

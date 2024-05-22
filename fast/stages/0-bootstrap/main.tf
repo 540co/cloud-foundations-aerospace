@@ -35,4 +35,16 @@ locals {
   }
   # naming: environment used in most resource names
   prefix = join("-", compact([var.prefix, "prod"]))
+
+  providers_template = templatefile("${abspath(path.module)}/templates/providers.tf.tpl", {
+    bucket = var.bucket
+    sa     = var.sa
+    name   = var.name
+    backend_extra = try(var.backend_extra, null)
+  })
+}
+
+resource "local_file" "bootstrap-providers" {
+  content  = local.providers_template
+  filename = "${var.outputs_location}/0-bootstrap-providers.tf"
 }

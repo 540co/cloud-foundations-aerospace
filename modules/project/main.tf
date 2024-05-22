@@ -1,23 +1,6 @@
-/**
- * Copyright 2022 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 locals {
-  descriptive_name = (
-    var.descriptive_name != null ? var.descriptive_name : "${local.prefix}${var.name}"
-  )
+  descriptive_name = "${var.prefix}-${formatdate("YYYYMMDD-HHmmss", timestamp())}"
+  
   parent_type = var.parent == null ? null : split("/", var.parent)[0]
   parent_id   = var.parent == null ? null : split("/", var.parent)[1]
   prefix      = var.prefix == null ? "" : "${var.prefix}-"
@@ -100,3 +83,139 @@ resource "google_monitoring_monitored_project" "primary" {
   metrics_scope = each.value
   name          = local.project.project_id
 }
+
+# resource "google_storage_bucket" "log_bucket" {
+#   name          = "${var.log_bucket_name}ibb"
+#   location      = var.region
+#   project       = local.project.project_id
+#   storage_class = "STANDARD"
+
+#   versioning {
+#     enabled = true
+#   }
+
+#   lifecycle_rule {
+#     action {
+#       type = "Delete"
+#     }
+#     condition {
+#       age = 365
+#     }
+#   }
+
+#   labels = {
+#     environment = "production"
+#     purpose     = "logging"
+#   }
+
+#   uniform_bucket_level_access = true
+# }
+
+# resource "google_storage_bucket" "terraform_state" {
+#   name          = "${var.bucket_name}ibb"
+#   location      = var.region
+#   project       = local.project.project_id
+#   storage_class = "STANDARD"
+#   force_destroy = true
+
+#   # versioning {
+#   #   enabled = true
+#   # }
+
+#   lifecycle_rule {
+#     action {
+#       type          = "SetStorageClass"
+#       storage_class = "NEARLINE"
+#     }
+#     condition {
+#       age                   = 365
+#       matches_storage_class = ["STANDARD", "DURABLE_REDUCED_AVAILABILITY"]
+#     }
+#   }
+
+#   lifecycle_rule {
+#     action {
+#       type          = "SetStorageClass"
+#       storage_class = "COLDLINE"
+#     }
+#     condition {
+#       age                   = 1095
+#       matches_storage_class = ["NEARLINE"]
+#     }
+#   }
+
+#   lifecycle_rule {
+#     action {
+#       type          = "SetStorageClass"
+#       storage_class = "ARCHIVE"
+#     }
+#     condition {
+#       age                   = 1825
+#       matches_storage_class = ["COLDLINE"]
+#     }
+#   }
+
+#   lifecycle_rule {
+#     action {
+#       type = "Delete"
+#     }
+#     condition {
+#       age    = 2555
+#     }
+#   }
+
+#   uniform_bucket_level_access = true
+
+#   logging {
+#     log_bucket        = google_storage_bucket.log_bucket.name
+#     log_object_prefix = "logs/"
+#   }
+
+#   # encryption {
+#   #   default_kms_key_name = var.kms_key_name
+#   # }
+
+#   retention_policy {
+#     retention_period = 365 * 3 // 3 years
+#   }
+
+#   labels = {
+#     environment = "production"
+#     purpose     = "terraform-state"
+#   }
+
+#   depends_on = [
+#     google_project.project,
+#     google_storage_bucket.log_bucket
+#   ]
+# }
+
+# resource "google_project_iam_binding" "storage_admin" {
+#   project = local.project.project_id
+#   role    = "roles/storage.admin"
+
+#   members = [
+#     "serviceAccount:${var.service_account_email}"
+#   ]
+# }
+
+# resource "google_storage_bucket_iam_binding" "no_public_access" {
+#   bucket = google_storage_bucket.terraform_state.name
+#   role   = "roles/storage.objectViewer"
+
+#   members = [
+#     "serviceAccount:${var.service_account_email}"
+#   ]
+
+#   condition {
+#     title       = "No public access"
+#     description = "Prevent public access"
+#     expression  = "request.auth != null"
+#   }
+# }
+
+# resource "google_storage_bucket_iam_member" "internal_only" {
+#   bucket = google_storage_bucket.terraform_state.name
+#   role   = "roles/storage.objectViewer"
+#   member = "serviceAccount:${var.internal_service_account_email}"
+# }

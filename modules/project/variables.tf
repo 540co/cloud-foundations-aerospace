@@ -284,3 +284,48 @@ variable "vpc_sc" {
   })
   default = null
 }
+
+variable "project_id" {
+  description = "The ID of the GCP project"
+  type        = string
+}
+
+variable "region" {
+  description = "The region to deploy resources"
+  type        = string
+  default     = "us-central1"
+}
+
+variable "bucket_name" {
+  description = "The name of the GCS bucket"
+  type        = string
+}
+
+variable "log_bucket_name" {
+  description = "The name of the GCS log bucket"
+  type        = string
+}
+
+variable "kms_key_name" {
+  description = "The name of the KMS key for encryption"
+  type        = string
+}
+
+variable "service_account_email" {
+  description = "The email of the service account for storage admin"
+  type        = string
+}
+
+variable "internal_service_account_email" {
+  description = "The email of the internal service account for bucket access"
+  type        = string
+}
+
+variable "organization_id" {
+  description = "Organization id in organizations/nnnnnn format."
+  type        = string
+  validation {
+    condition     = can(regex("^organizations/[0-9]+", var.organization_id))
+    error_message = "The organization_id must in the form organizations/nnn."
+  }
+}
