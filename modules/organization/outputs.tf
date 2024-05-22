@@ -40,7 +40,7 @@ output "id" {
   depends_on = [
     google_logging_organization_settings.default,
     google_org_policy_custom_constraint.constraint,
-    google_org_policy_policy.default,
+    # google_org_policy_policy.default,
     google_organization_iam_binding.authoritative,
     google_organization_iam_binding.bindings,
     google_organization_iam_custom_role.roles,
@@ -76,7 +76,7 @@ output "organization_id" {
   value       = var.organization_id
   depends_on = [
     google_org_policy_custom_constraint.constraint,
-    google_org_policy_policy.default,
+    # google_org_policy_policy.default,
     google_organization_iam_binding.authoritative,
     google_organization_iam_binding.bindings,
     google_organization_iam_member.bindings,

@@ -1,85 +1,36 @@
-/**
- * Copyright 2024 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-# tfdoc:file:description Automation project and resources.
-
 locals {
   cicd_resman_sa   = try(module.automation-tf-cicd-sa["resman"].iam_email, "")
   cicd_resman_r_sa = try(module.automation-tf-cicd-r-sa["resman"].iam_email, "")
+  
+  # Use the prefix directly
+  descriptive_name = var.prefix
 }
 
 module "automation-project" {
-  source          = "../../../modules/project"
-  billing_account = var.billing_account.id
-  name            = "iac-core-0"
-  parent = coalesce(
-    var.project_parent_ids.automation, "organizations/${var.organization.id}"
-  )
-  prefix = local.prefix
-  contacts = (
-    var.bootstrap_user != null || var.essential_contacts == null
-    ? {}
-    : { (var.essential_contacts) = ["ALL"] }
-  )
-  # human (groups) IAM bindings
-  iam_by_principals = {
-    (local.principals.gcp-devops) = [
-      "roles/iam.serviceAccountAdmin",
-      "roles/iam.serviceAccountTokenCreator",
-    ]
-    (local.principals.gcp-organization-admins) = [
-      "roles/iam.serviceAccountTokenCreator",
-      "roles/iam.workloadIdentityPoolAdmin"
-    ]
+  source                            = "../../../modules/project"
+  billing_account                   = var.billing_account.id
+  name                              = "iac-core-0"
+  project_id                        = "iac-core-0"
+  parent                            = coalesce(var.project_parent_ids.automation, var.organization_id)
+  prefix                            = local.prefix
+  organization_id                   = var.organization_id
+  contacts                          = (var.bootstrap_user != null || var.essential_contacts == null ? {} : { (var.essential_contacts) = ["ALL"] })
+  iam_by_principals                 = {
+    (local.principals.gcp-devops)   = ["roles/iam.serviceAccountAdmin", "roles/iam.serviceAccountTokenCreator"]
+    (local.principals.gcp-organization-admins) = ["roles/iam.serviceAccountTokenCreator", "roles/iam.workloadIdentityPoolAdmin"]
   }
-  # machine (service accounts) IAM bindings
   iam = {
-    "roles/browser" = [
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    "roles/owner" = [
-      module.automation-tf-bootstrap-sa.iam_email
-    ]
-    "roles/cloudbuild.builds.editor" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
-    "roles/cloudbuild.builds.viewer" = [
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    "roles/iam.serviceAccountAdmin" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
-    "roles/iam.serviceAccountViewer" = [
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    "roles/iam.workloadIdentityPoolAdmin" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
-    "roles/iam.workloadIdentityPoolViewer" = [
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    "roles/source.admin" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
-    "roles/source.reader" = [
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    "roles/storage.admin" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
+    "roles/browser"                                = [module.automation-tf-resman-r-sa.iam_email]
+    "roles/owner"                                  = [module.automation-tf-bootstrap-sa.iam_email]
+    "roles/cloudbuild.builds.editor"               = [module.automation-tf-resman-sa.iam_email]
+    "roles/cloudbuild.builds.viewer"               = [module.automation-tf-resman-r-sa.iam_email]
+    "roles/iam.serviceAccountAdmin"                = [module.automation-tf-resman-sa.iam_email]
+    "roles/iam.serviceAccountViewer"               = [module.automation-tf-resman-r-sa.iam_email]
+    "roles/iam.workloadIdentityPoolAdmin"          = [module.automation-tf-resman-sa.iam_email]
+    "roles/iam.workloadIdentityPoolViewer"         = [module.automation-tf-resman-r-sa.iam_email]
+    "roles/source.admin"                           = [module.automation-tf-resman-sa.iam_email]
+    "roles/source.reader"                          = [module.automation-tf-resman-r-sa.iam_email]
+    "roles/storage.admin"                          = [module.automation-tf-resman-sa.iam_email]
     (module.organization.custom_role_id["storage_viewer"]) = [
       module.automation-tf-bootstrap-r-sa.iam_email,
       module.automation-tf-resman-r-sa.iam_email
@@ -91,15 +42,12 @@ module "automation-project" {
   }
   iam_bindings = {
     delegated_grants_resman = {
-      members = [module.automation-tf-resman-sa.iam_email]
-      role    = "roles/resourcemanager.projectIamAdmin"
+      members   = [module.automation-tf-resman-sa.iam_email]
+      role      = "roles/resourcemanager.projectIamAdmin"
       condition = {
         title       = "resman_delegated_grant"
         description = "Resource manager service account delegated grant."
-        expression = format(
-          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['%s'])",
-          "roles/serviceusage.serviceUsageConsumer"
-        )
+        expression  = format("api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['%s'])", "roles/serviceusage.serviceUsageConsumer")
       }
     }
   }
@@ -114,15 +62,9 @@ module "automation-project" {
     }
   }
   org_policies = var.bootstrap_user != null ? {} : {
-    "compute.skipDefaultNetworkCreation" = {
-      rules = [{ enforce = true }]
-    }
-    "iam.automaticIamGrantsForDefaultServiceAccounts" = {
-      rules = [{ enforce = true }]
-    }
-    "iam.disableServiceAccountKeyCreation" = {
-      rules = [{ enforce = true }]
-    }
+    "compute.skipDefaultNetworkCreation"            = { rules = [{ enforce = true }] }
+    "iam.automaticIamGrantsForDefaultServiceAccounts" = { rules = [{ enforce = true }] }
+    "iam.disableServiceAccountKeyCreation"           = { rules = [{ enforce = true }] }
   }
   services = concat(
     [
@@ -149,31 +91,22 @@ module "automation-project" {
       "storage.googleapis.com",
       "sts.googleapis.com"
     ],
-    # enable specific service only after org policies have been applied
     var.bootstrap_user != null ? [] : [
       "cloudbuild.googleapis.com",
       "compute.googleapis.com",
       "container.googleapis.com",
     ]
   )
-
-  # Enable IAM data access logs to capture impersonation and service
-  # account token generation events. This is implemented within the
-  # automation project to limit log volume. For heightened security,
-  # consider enabling it at the organization level. A log sink within
-  # the organization will collect and store these logs in a logging
-  # bucket. See
-  # https://cloud.google.com/iam/docs/audit-logging#audited_operations
   logging_data_access = {
     "iam.googleapis.com" = {
-      # ADMIN_READ captures impersonation and token generation/exchanges
       ADMIN_READ = []
-      # enable DATA_WRITE if you want to capture configuration changes
-      # to IAM-related resources (roles, deny policies, service
-      # accounts, identity pools, etc)
-      # DATA_WRITE = []
     }
   }
+  log_bucket_name                  = "iac-core-0-bkt-logs"
+  bucket_name                      = "iac-core-0-state"
+  service_account_email            = module.automation-tf-resman-sa.iam_email
+  internal_service_account_email   = module.automation-tf-bootstrap-sa.iam_email
+  kms_key_name                     = "iac-core-0-kms-key"
 }
 
 # output files bucket
@@ -206,7 +139,7 @@ module "automation-tf-bootstrap-sa" {
   source       = "../../../modules/iam-service-account"
   project_id   = module.automation-project.project_id
   name         = "bootstrap-0"
-  display_name = "Terraform organization bootstrap service account."
+  display_name = "Service account for bootstrap-0, bootstrap service account."
   prefix       = local.prefix
   # allow SA used by CI/CD workflow to impersonate this SA
   iam = {
@@ -223,7 +156,7 @@ module "automation-tf-bootstrap-r-sa" {
   source       = "../../../modules/iam-service-account"
   project_id   = module.automation-project.project_id
   name         = "bootstrap-0r"
-  display_name = "Terraform organization bootstrap service account (read-only)."
+  display_name = "Service account for bootstrap-0r use for workflow (read-only)."
   prefix       = local.prefix
   # allow SA used by CI/CD workflow to impersonate this SA
   iam = {
@@ -265,7 +198,7 @@ module "automation-tf-resman-sa" {
   source       = "../../../modules/iam-service-account"
   project_id   = module.automation-project.project_id
   name         = "resman-0"
-  display_name = "Terraform stage 1 resman service account."
+  display_name = "Service account stage 1 resman service account."
   prefix       = local.prefix
   # allow SA used by CI/CD workflow to impersonate this SA
   # we use additive IAM to allow tenant CI/CD SAs to impersonate it
@@ -286,7 +219,7 @@ module "automation-tf-resman-r-sa" {
   source       = "../../../modules/iam-service-account"
   project_id   = module.automation-project.project_id
   name         = "resman-0r"
-  display_name = "Terraform stage 1 resman service account (read-only)."
+  display_name = "Service account stage 1 resman service account (read-only)."
   prefix       = local.prefix
   # allow SA used by CI/CD workflow to impersonate this SA
   # we use additive IAM to allow tenant CI/CD SAs to impersonate it
@@ -310,3 +243,130 @@ module "automation-tf-resman-r-sa" {
     (module.automation-tf-output-gcs.name) = [module.organization.custom_role_id["storage_viewer"]]
   }
 }
+
+# Log bucket for storing access logs
+resource "google_storage_bucket" "log_bucket" {
+  name          = "${var.log_bucket_name}-${local.descriptive_name}"
+  location      = var.region
+  project       = module.automation-project.project_id
+  storage_class = "STANDARD"
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      age = 365
+    }
+  }
+
+  labels = {
+    environment = "production"
+    purpose     = "logging"
+  }
+
+  uniform_bucket_level_access = true
+}
+
+resource "google_storage_bucket" "terraform_state" {
+  name          = "${var.bucket_name}"      # -${local.descriptive_name}
+  location      = var.region
+  project       = module.automation-project.project_id
+  storage_class = "STANDARD"
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    action {
+      type          = "SetStorageClass"
+      storage_class = "NEARLINE"
+    }
+    condition {
+      age                   = 365
+      matches_storage_class = ["STANDARD", "DURABLE_REDUCED_AVAILABILITY"]
+    }
+  }
+
+  lifecycle_rule {
+    action {
+      type          = "SetStorageClass"
+      storage_class = "COLDLINE"
+    }
+    condition {
+      age                   = 1095
+      matches_storage_class = ["NEARLINE"]
+    }
+  }
+
+  lifecycle_rule {
+    action {
+      type          = "SetStorageClass"
+      storage_class = "ARCHIVE"
+    }
+    condition {
+      age                   = 1825
+      matches_storage_class = ["COLDLINE"]
+    }
+  }
+
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      age    = 2555
+    }
+  }
+
+  uniform_bucket_level_access = true
+
+  logging {
+    log_bucket        = google_storage_bucket.log_bucket.name
+    log_object_prefix = "logs/"
+  }
+
+  # encryption {
+  #   default_kms_key_name = var.kms_key_name
+  # }
+
+  # retention_policy {
+  #   retention_period = 365 * 3 // 3 years
+  # }
+
+  labels = {
+    environment = "production"
+    purpose     = "terraform-state"
+  }
+
+  depends_on = [
+    google_storage_bucket.log_bucket
+  ]
+}
+
+resource "google_storage_bucket_iam_binding" "no_public_access" {
+  bucket = google_storage_bucket.terraform_state.name
+  role   = "roles/storage.objectViewer"
+
+  members = [
+    "serviceAccount:${var.service_account_email}"
+  ]
+
+  condition {
+    title       = "No public access"
+    description = "Prevent public access"
+    expression  = "request.auth != null"
+  }
+}
+
+resource "google_storage_bucket_iam_member" "internal_only" {
+  bucket = google_storage_bucket.terraform_state.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${var.service_account_email}"
+}
+

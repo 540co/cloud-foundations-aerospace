@@ -69,10 +69,10 @@ variable "cicd_repositories" {
     condition = alltrue([
       for k, v in coalesce(var.cicd_repositories, {}) :
       v == null || (
-        contains(["github", "gitlab", "sourcerepo"], coalesce(try(v.type, null), "null"))
+        contains(["github", "sourcerepo"], coalesce(try(v.type, null), "null"))
       )
     ])
-    error_message = "Invalid repository type, supported types: 'github' 'gitlab' or 'sourcerepo'."
+    error_message = "Invalid repository type, supported types: 'github' or 'sourcerepo'."
   }
 }
 
@@ -119,13 +119,13 @@ variable "groups" {
   # https://cloud.google.com/docs/enterprise/setup-checklist
   description = "Group names or IAM-format principals to grant organization-level permissions. If just the name is provided, the 'group:' principal and organization domain are interpolated."
   type = object({
-    gcp-billing-admins      = optional(string, "gcp-billing-admins")
-    gcp-devops              = optional(string, "gcp-devops")
-    gcp-network-admins      = optional(string, "gcp-vpc-network-admins")
-    gcp-organization-admins = optional(string, "gcp-organization-admins")
-    gcp-security-admins     = optional(string, "gcp-security-admins")
+    gcp-billing-admins      = optional(string, "gcp_billing_admins")
+    gcp-devops              = optional(string, "gcp_devops")
+    gcp-network-admins      = optional(string, "gcp_vpc_network_admins")
+    gcp-organization-admins = optional(string, "gcp_organization_admins")
+    gcp-security-admins     = optional(string, "gcp_security_admins")
     # aliased to gcp-devops as the checklist does not create it
-    gcp-support = optional(string, "gcp-devops")
+    gcp-support = optional(string, "gcp_devops")
   })
   nullable = false
   default  = {}
@@ -163,10 +163,10 @@ variable "iam_by_principals" {
 variable "locations" {
   description = "Optional locations for GCS, BigQuery, and logging buckets created here."
   type = object({
-    bq      = optional(string, "EU")
-    gcs     = optional(string, "EU")
-    logging = optional(string, "global")
-    pubsub  = optional(list(string), [])
+    bq      = optional(string, "us-central1")
+    gcs     = optional(string, "us-central1")
+    logging = optional(string, "us-central1")
+    pubsub  = optional(list(string), ["us-central1"])
   })
   nullable = false
   default  = {}
@@ -199,16 +199,11 @@ variable "log_sinks" {
       type   = "logging"
     }
     vpc-sc = {
-      filter = <<-FILTER
-        protoPayload.metadata.@type="type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata"
-      FILTER
+      filter = "protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata\""
       type   = "logging"
     }
     workspace-audit-logs = {
-      filter = <<-FILTER
-        log_id("cloudaudit.googleapis.com/data_access") AND
-        protoPayload.serviceName="login.googleapis.com"
-      FILTER
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Fdata_access\" and protoPayload.serviceName:\"login.googleapis.com\""
       type   = "logging"
     }
   }
@@ -250,7 +245,7 @@ variable "organization" {
 variable "outputs_location" {
   description = "Enable writing provider, tfvars and CI/CD workflow files to local filesystem. Leave null to disable."
   type        = string
-  default     = null
+  default     = null    # default = "~/fast-config"
 }
 
 variable "prefix" {
@@ -260,6 +255,7 @@ variable "prefix" {
     condition     = try(length(var.prefix), 0) < 10
     error_message = "Use a maximum of 9 characters for prefix."
   }
+  default     = "iha"
 }
 
 variable "project_parent_ids" {
@@ -302,9 +298,70 @@ variable "workload_identity_providers" {
   }))
   default  = {}
   nullable = false
-  # TODO: fix validation
-  # validation {
-  #   condition     = var.federated_identity_providers.custom_settings == null
-  #   error_message = "Custom settings cannot be null."
-  # }
+}
+
+variable "bucket" {
+  type    = string
+  default = "iac-core-0-state-iha"
+}
+
+variable "sa" {
+  type    = string
+  default = ""
+}
+
+variable "name" {
+  type    = string
+  default = "cloud-foundation"
+}
+
+variable "backend_extra" {
+  type = string
+  description = "Additional configuration for the backend."
+  default = null
+}
+
+variable "project_id" {
+  description = "The ID of the GCP project"
+  type        = string
+}
+
+variable "region" {
+  description = "The region to deploy resources"
+  type        = string
+  default     = "us-central1"
+}
+
+variable "bucket_name" {
+  description = "The name of the GCS bucket"
+  type        = string
+}
+
+variable "log_bucket_name" {
+  description = "The name of the GCS log bucket"
+  type        = string
+}
+
+variable "kms_key_name" {
+  description = "The name of the KMS key for encryption"
+  type        = string
+}
+
+variable "service_account_email" {
+  description = "The email of the service account for storage admin"
+  type        = string
+}
+
+variable "internal_service_account_email" {
+  description = "The email of the internal service account for bucket access"
+  type        = string
+}  
+
+variable "organization_id" {
+  description = "The ID of the GCP organization in the form organizations/nnnnnn format."
+  type        = string
+  validation {
+    condition     = can(regex("^organizations/\\d+$", var.organization_id))
+    error_message = "The organization_id must in the form organizations/nnn."
+  }
 }
